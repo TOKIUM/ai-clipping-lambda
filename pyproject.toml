@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "ai-clipping-lambda"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "ai_clipping_lambda"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pymupdf = "1.25.5"
+boto3 = "1.28.38"
+openai = "0.28.0"
+google-cloud-vision = "3.4.0"
+google-cloud-storage = "2.10.0"
+python-dotenv = "1.0.0"
+google-generativeai = ">=0.3.0"
+google-cloud-aiplatform = ">=1.36.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

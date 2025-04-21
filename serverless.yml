@@ -3,14 +3,123 @@ org: tokium
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: ai-clipping-lambda
 
+frameworkVersion: '3'
+
 provider:
   name: aws
   runtime: python3.12
+  region: ${opt:region, 'ap-northeast-1'}
+  memorySize: ${self:custom.environments.${self:provider.stage}.memorySize}
+  timeout: ${self:custom.environments.${self:provider.stage}.timeout}
+  
+  # 環境変数の設定
+  environment:
+    ENVIRONMENT: ${self:provider.stage}
+    LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
+    OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
+    GEMINI_MODEL: ${self:custom.environments.${self:provider.stage}.geminiModel}
+    GOOGLE_CLOUD_PROJECT: ${self:custom.environments.${self:provider.stage}.googleCloudProject}
+    GOOGLE_CLOUD_REGION: ${self:custom.environments.${self:provider.stage}.googleCloudRegion}
+    GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
+  
+  # IAMロールの設定
+  iamRoleStatements:
+    # S3へのアクセス権限
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+      Resource: "arn:aws:s3:::${self:custom.environments.${self:provider.stage}.bucketName}/*"
+    
+    # 入力SQSへのアクセス権限
+    - Effect: Allow
+      Action:
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+      Resource: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
+    
+    # 出力SQSへのアクセス権限
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource: ${self:custom.environments.${self:provider.stage}.outputQueueArn}
+
+custom:
+  # 環境ごとの設定
+  environments:
+    dev:
+      memorySize: 1024
+      timeout: 300
+      logLevel: DEBUG
+      geminiModel: gemini-2.0-flash
+      messageRetentionPeriod: 1209600  # 14日間（秒）
+      googleCloudProject: ${env:DEV_GOOGLE_CLOUD_PROJECT, 'your-dev-project-id'}
+      googleCloudRegion: asia-northeast1
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-input-queue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-output-queue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-dev-output-queue
+      bucketName: ai-clipping-dev-bucket
+      
+    staging:
+      memorySize: 1536
+      timeout: 360
+      logLevel: INFO
+      geminiModel: gemini-2.0-flash
+      messageRetentionPeriod: 1209600  # 14日間（秒）
+      googleCloudProject: ${env:STAGING_GOOGLE_CLOUD_PROJECT, 'your-staging-project-id'}
+      googleCloudRegion: asia-northeast1
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-input-queue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-output-queue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-staging-output-queue
+      bucketName: ai-clipping-staging-bucket
+      
+    prod:
+      memorySize: 2048
+      timeout: 420
+      logLevel: INFO
+      geminiModel: gemini-2.0-flash
+      messageRetentionPeriod: 1209600  # 14日間（秒）
+      googleCloudProject: ${env:PROD_GOOGLE_CLOUD_PROJECT, 'your-prod-project-id'}
+      googleCloudRegion: asia-northeast1
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-input-queue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-output-queue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-prod-output-queue
+      bucketName: ai-clipping-prod-bucket
+      
+  # デフォルト環境はdev
+  stage: ${opt:stage, 'dev'}
+  
+  # バケット名と各キュー名の設定（環境ごとに分離）
+  inputQueueName: ai-clipping-${self:provider.stage}-input-queue
+  outputQueueName: ai-clipping-${self:provider.stage}-output-queue
 
 functions:
-  hello:
-    handler: handler.hello
+  processDocument:
+    handler: handler.process_document
     events:
-      - httpApi:
-          path: /
-          method: get
+      - sqs:
+          batchSize: 1
+          arn: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
+
+resources:
+  Resources: {}
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!.venv/**'
+    - '!.env'
+    - '!.git/**'
+    - '!tests/**'
+    - '!.pytest_cache/**'
+
+plugins:
+  - serverless-python-requirements
+
+# Python依存関係の設定
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    useDownloadCache: true
+    useStaticCache: true
+    layer: true

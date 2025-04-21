@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - OUTPUT_QUEUE_URL=http://localstack:4566/000000000000/ai-clipping-dev-output-queue
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=ap-northeast-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-1.5-pro
+    depends_on:
+      - localstack
+    command: >
+      bash -c "sleep 10 && 
+      python -m pytest -xvs tests/"
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs
+      - DEFAULT_REGION=ap-northeast-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./localstack:/docker-entrypoint-initaws.d
+      - "/var/run/docker.sock:/var/run/docker.sock"

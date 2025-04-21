@@ -1,0 +1,7 @@
+boto3==1.28.38
+openai==0.28.0
+google-cloud-vision==3.4.0
+google-cloud-storage==2.10.0
+PyMuPDF==1.25.5
+python-dotenv==1.0.0
+google-cloud-aiplatform>=1.36.0
