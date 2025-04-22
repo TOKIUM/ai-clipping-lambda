@@ -1,6 +1,7 @@
 import os
 import json
 from typing import Dict, Any, List
+import vertexai
 from google.cloud import aiplatform
 from google.protobuf import json_format
 from google.protobuf.struct_pb2 import Value
@@ -13,7 +14,7 @@ logger = setup_logger()
 
 # 使用するモデルを設定
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "asia-northeast1")
+LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
 
 # 認証情報ファイルのパスを設定（環境変数、またはデフォルトパス）
 CREDENTIALS_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "./credential.json")
@@ -32,9 +33,7 @@ def extract_information(text):
     
     try:
         # Vertex AIの初期化
-        aiplatform.init(
-            location=LOCATION,
-        )
+        vertexai.init(location=LOCATION)
         
         # システムプロンプトとユーザープロンプトを取得
         system_prompt = get_prompt_template('system')
@@ -42,37 +41,56 @@ def extract_information(text):
         
         # ユーザープロンプトの構築
         prompt = user_prompt_template.format(text=text)
+
+        # モデル設定
+        generation_config = {
+            "temperature": 0,
+            "max_output_tokens": 8192,
+            "response_mime_type": "application/json",
+        }
         
         # Geminiモデルの初期化
-        model = GenerativeModel(MODEL)
-        
-        # チャットの初期化
-        chat = model.start_chat(
-            context=system_prompt,
+        model = GenerativeModel(
+            model_name=MODEL,
+            generation_config=generation_config,
+            system_instruction=system_prompt,
         )
         
-        # リクエストを送信
-        response = chat.send_message(
-            prompt,
-            generation_config={
-                "temperature": 0.3,
-                "max_output_tokens": 2000,
-                "top_p": 1.0,
-            }
-        )
+        response = model.generate_content(prompt)
         
         # レスポンスからテキストを取得
         result = response.text
-        
+        # トークン使用量を取得
+        usage_metadata = response.usage_metadata
+        prompt_tokens = usage_metadata.prompt_token_count
+        candidates_tokens = usage_metadata.candidates_token_count
+        total_tokens = usage_metadata.total_token_count
+
+        logger.info(f"Gemini Token Usage: Prompt={prompt_tokens}, Candidates={candidates_tokens}, Total={total_tokens}")
+
         # JSON形式のレスポンスをパース
         try:
             extracted_info = json.loads(result)
+            # 抽出結果にトークン情報を追加
+            extracted_info['usage_metadata'] = {
+                'prompt_token_count': prompt_tokens,
+                'candidates_token_count': candidates_tokens,
+                'total_token_count': total_tokens
+            }
             logger.info("Successfully extracted information using Gemini LLM via Vertex AI")
             return extracted_info
         except json.JSONDecodeError:
             # JSONとしてパースできない場合は、テキストとしてそのまま返す
             logger.warning("Gemini LLM response is not in valid JSON format. Returning raw text.")
-            return {"raw_response": result}
+            # この場合でもトークン情報は含める
+            return {
+                "raw_response": result,
+                'usage_metadata': {
+                    'prompt_token_count': prompt_tokens,
+                    'candidates_token_count': candidates_tokens,
+                    'total_token_count': total_tokens
+                }
+            }
             
     except Exception as e:
         logger.error(f"Error extracting information using Gemini LLM via Vertex AI: {str(e)}")

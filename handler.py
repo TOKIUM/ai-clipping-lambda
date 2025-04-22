@@ -8,6 +8,7 @@ from src.processor import process_extracted_data
 from src.formatter import format_sqs_message
 from src.sqs_sender import send_to_queue
 from src.utils.logger import setup_logger
+from src.utils.helper import convert_bounding_box_format
 
 logger = setup_logger()
 
@@ -105,16 +106,26 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     })
                     continue
 
+                # *** Convert Bounding Box format before passing to LLM ***
+                converted_ocr_data = convert_bounding_box_format(ocr_response)
+
+                # Check again if conversion resulted in unusable data
+                if not converted_ocr_data:
+                     logger.warning(f"OCR data became invalid after conversion for {object_key}. Skipping.")
+                     results.append({
+                         "file": object_key,
+                         "status": "skipped",
+                         "message_id": None,
+                         "error": "OCR data conversion failed or resulted in empty data"
+                     })
+                     continue
+
                 # LLMに渡すテキストと後処理用のOCRデータを準備
-                llm_input_text = ""
-                ocr_data_for_processor = None
-                if isinstance(ocr_response, list): # PDFの場合
-                    # 全ページのテキストを結合
-                    llm_input_text = "\n\n".join([resp.full_text_annotation.text for resp in ocr_response if resp.full_text_annotation])
-                    ocr_data_for_processor = ocr_response # リスト全体を渡す
-                elif hasattr(ocr_response, 'full_text_annotation') and ocr_response.full_text_annotation: # 画像の場合
-                    llm_input_text = ocr_response.full_text_annotation.text
-                    ocr_data_for_processor = ocr_response # 単一レスポンスを渡す
+                ocr_data_for_processor = converted_ocr_data
+                if isinstance(converted_ocr_data, list): # PDFの場合
+                    ocr_data_for_processor = converted_ocr_data # リスト全体を渡す
+                elif hasattr(converted_ocr_data, 'full_text_annotation') and converted_ocr_data.full_text_annotation: # 画像の場合
+                    ocr_data_for_processor = converted_ocr_data # 単一レスポンスを渡す
                 else:
                     logger.warning(f"Unexpected OCR response format or no text annotation for {object_key}. Skipping.")
                     results.append({
@@ -125,22 +136,11 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     })
                     continue
 
-                # テキストがない場合はスキップ
-                if not llm_input_text.strip():
-                    logger.warning(f"OCR result for {object_key} is empty after processing. Skipping.")
-                    results.append({
-                        "file": object_key,
-                        "status": "skipped",
-                        "message_id": None,
-                        "error": "Empty text after OCR processing"
-                    })
-                    continue
-
-                # 3. LLMで情報抽出 (テキストのみ渡す)
-                extracted_info = extract_information(llm_input_text)
+                # 3. LLMで情報抽出 (変換後のデータを渡す)
+                extracted_info = extract_information(ocr_data_for_processor)
 
                 # 4. 抽出データの後処理 (LLM結果とOCRレスポンス全体を渡す)
-                processed_data = process_extracted_data(extracted_info, ocr_data_for_processor)
+                processed_data = process_extracted_data(extracted_info, ocr_response)
 
                 # 5. SQSメッセージのフォーマット
                 final_sqs_message = format_sqs_message(processed_data, object_key)

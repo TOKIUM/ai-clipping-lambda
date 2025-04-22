@@ -53,7 +53,7 @@ custom:
       logLevel: DEBUG
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: asia-northeast1
+      googleCloudRegion: us-central1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-output-queue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-dev-output-queue
@@ -65,7 +65,7 @@ custom:
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: asia-northeast1
+      googleCloudRegion: us-central1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-output-queue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-staging-output-queue
@@ -77,7 +77,7 @@ custom:
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: asia-northeast1
+      googleCloudRegion: us-central1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-output-queue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-prod-output-queue
