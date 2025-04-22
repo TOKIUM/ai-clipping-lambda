@@ -18,9 +18,9 @@ provider:
     LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
     OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
     GEMINI_MODEL: ${self:custom.environments.${self:provider.stage}.geminiModel}
-    GOOGLE_CLOUD_PROJECT: ${self:custom.environments.${self:provider.stage}.googleCloudProject}
     GOOGLE_CLOUD_REGION: ${self:custom.environments.${self:provider.stage}.googleCloudRegion}
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
+    S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.bucketName}
   
   # IAMロールの設定
   iamRoleStatements:
@@ -53,7 +53,6 @@ custom:
       logLevel: DEBUG
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudProject: ${env:DEV_GOOGLE_CLOUD_PROJECT, 'your-dev-project-id'}
       googleCloudRegion: asia-northeast1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-output-queue
@@ -66,7 +65,6 @@ custom:
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudProject: ${env:STAGING_GOOGLE_CLOUD_PROJECT, 'your-staging-project-id'}
       googleCloudRegion: asia-northeast1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-output-queue
@@ -79,7 +77,6 @@ custom:
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudProject: ${env:PROD_GOOGLE_CLOUD_PROJECT, 'your-prod-project-id'}
       googleCloudRegion: asia-northeast1
       inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-input-queue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-output-queue

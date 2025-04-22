@@ -13,7 +13,6 @@ logger = setup_logger()
 
 # 使用するモデルを設定
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("GOOGLE_CLOUD_REGION", "asia-northeast1")
 
 # 認証情報ファイルのパスを設定（環境変数、またはデフォルトパス）
@@ -34,7 +33,6 @@ def extract_information(text):
     try:
         # Vertex AIの初期化
         aiplatform.init(
-            project=PROJECT_ID,
             location=LOCATION,
         )
         
