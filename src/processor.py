@@ -1,6 +1,4 @@
-import json
 import re
-import math
 from datetime import datetime
 from google.cloud import vision  # Vision APIの型ヒントのためにインポート
 from typing import List, Dict, Any, Union  # 型ヒントをインポート

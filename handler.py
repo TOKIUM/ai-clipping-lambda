@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import Any, Dict, List, TypedDict
 from src.download import download_file
 from src.ocr import extract_text

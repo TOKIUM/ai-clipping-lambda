@@ -1,6 +1,5 @@
 import os
 from google.cloud import vision
-from google.cloud import storage
 import io
 import fitz  # PyMuPDF
 from src.utils.logger import setup_logger

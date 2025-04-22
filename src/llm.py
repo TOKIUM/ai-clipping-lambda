@@ -1,12 +1,7 @@
 import os
 import json
-from typing import Dict, Any, List
 import vertexai
-from google.cloud import aiplatform
-from google.protobuf import json_format
-from google.protobuf.struct_pb2 import Value
-from vertexai.preview.generative_models import GenerativeModel, ChatSession
-from vertexai.generative_models import Content
+from vertexai.preview.generative_models import GenerativeModel
 from src.utils.logger import setup_logger
 from src.utils.helper import get_prompt_template
 

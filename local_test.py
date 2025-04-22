@@ -6,9 +6,7 @@ Python 3.12の新機能を活用して最適化
 import os
 import sys
 import json
-import tempfile
 import argparse
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import TypedDict, NotRequired, Any, Dict, List, Optional

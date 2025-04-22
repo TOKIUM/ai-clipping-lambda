@@ -1,5 +1,4 @@
 import os
-import json
 from pathlib import Path
 
 def get_prompt_template(prompt_type='user'):
