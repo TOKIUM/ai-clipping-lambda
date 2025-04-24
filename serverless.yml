@@ -18,7 +18,7 @@ provider:
     LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
     OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
     GEMINI_MODEL: ${self:custom.environments.${self:provider.stage}.geminiModel}
-    GOOGLE_CLOUD_REGION: ${self:custom.environments.${self:provider.stage}.googleCloudRegion}
+    GOOGLE_CLOUD_REGION: us-central1
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
     S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.bucketName}
   
@@ -34,8 +34,6 @@ provider:
     - Effect: Allow
       Action:
         - sqs:ReceiveMessage
-        - sqs:DeleteMessage
-        - sqs:GetQueueAttributes
       Resource: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
     
     # 出力SQSへのアクセス権限
@@ -52,43 +50,33 @@ custom:
       timeout: 300
       logLevel: DEBUG
       geminiModel: gemini-2.0-flash
-      messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: us-central1
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-input-queue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-dev-output-queue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-dev-output-queue
-      bucketName: ai-clipping-dev-bucket
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionRequestQueue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/development-clipSuggestion-aiSuggestionResultQueue
+      bucketName: national-tax-document-clipping-development
       
     staging:
       memorySize: 1536
       timeout: 360
       logLevel: INFO
       geminiModel: gemini-2.0-flash
-      messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: us-central1
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-input-queue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-staging-output-queue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-staging-output-queue
-      bucketName: ai-clipping-staging-bucket
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionRequestQueue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/staging-clipSuggestion-aiSuggestionResultQueue
+      bucketName: national-tax-document-clipping-staging
       
     prod:
       memorySize: 2048
       timeout: 420
       logLevel: INFO
       geminiModel: gemini-2.0-flash
-      messageRetentionPeriod: 1209600  # 14日間（秒）
-      googleCloudRegion: us-central1
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-input-queue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:123456789012:ai-clipping-prod-output-queue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/123456789012/ai-clipping-prod-output-queue
-      bucketName: ai-clipping-prod-bucket
+      inputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionRequestQueue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/219825478644/production-clipSuggestion-aiSuggestionResultQueue
+      bucketName: national-tax-document-clipping-production
       
   # デフォルト環境はdev
   stage: ${opt:stage, 'dev'}
-  
-  # バケット名と各キュー名の設定（環境ごとに分離）
-  inputQueueName: ai-clipping-${self:provider.stage}-input-queue
-  outputQueueName: ai-clipping-${self:provider.stage}-output-queue
 
 functions:
   processDocument:
