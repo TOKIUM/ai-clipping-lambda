@@ -1,26 +1,25 @@
-FROM python:3.12-slim
+FROM public.ecr.aws/lambda/python:3.12
 
-WORKDIR /app
+WORKDIR ${LAMBDA_TASK_ROOT}
 
-# 必要なパッケージをインストール
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    libffi-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Poetryをインストール
+RUN pip install poetry
 
-# 依存関係をコピーしてインストール
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# 依存関係ファイルをコピー
+COPY poetry.lock pyproject.toml ./
+
+# 本番環境の依存関係のみインストール
+# --no-root はプロジェクト自体をインストールしないオプション
+RUN poetry install --no-root
 
 # アプリケーションコードをコピー
-COPY . .
+COPY src/ ${LAMBDA_TASK_ROOT}/src
+COPY handler.py ${LAMBDA_TASK_ROOT}/
+COPY credential.json ${LAMBDA_TASK_ROOT}/
 
-# 環境変数の設定
-ENV PYTHONPATH=/app
-ENV ENVIRONMENT=development
-ENV LOG_LEVEL=INFO
+# 環境変数の設定 (serverless.yml で設定されるものが優先される場合が多い)
+# ENV ENVIRONMENT=development
+# ENV LOG_LEVEL=INFO
 
-CMD ["python", "-m", "pytest", "-xvs", "tests/"]
+# Lambdaハンドラーを指定
+CMD ["handler.process_document"]

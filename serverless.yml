@@ -3,21 +3,32 @@ org: tokium
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: ai-clipping-lambda
 
-frameworkVersion: '3'
+frameworkVersion: '4'
 
 provider:
   name: aws
-  runtime: python3.12
+  stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'ap-northeast-1'}
   memorySize: ${self:custom.environments.${self:provider.stage}.memorySize}
   timeout: 900
   
+  # コンテナイメージの設定を追加
+  ecr:
+    images:
+      appimage:
+        path: ./
+        # Dockerfile名を指定する場合 (デフォルトは Dockerfile)
+        # file: Dockerfile 
+        # ビルド引数を渡す場合
+        # buildArgs:
+        #   MY_VAR: my_value
+
   # 環境変数の設定
   environment:
     ENVIRONMENT: ${self:provider.stage}
     LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
     OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
-    GEMINI_MODEL: ${self:custom.environments.${self:provider.stage}.geminiModel}
+    GEMINI_MODEL: gemini-2.0-flash
     GOOGLE_CLOUD_REGION: us-central1
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
     S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.bucketName}
@@ -34,6 +45,8 @@ provider:
     - Effect: Allow
       Action:
         - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
       Resource: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
     
     # 出力SQSへのアクセス権限
@@ -48,7 +61,6 @@ custom:
     dev:
       memorySize: 1024
       logLevel: DEBUG
-      geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionRequestQueue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/development-clipSuggestion-aiSuggestionResultQueue
@@ -57,7 +69,6 @@ custom:
     staging:
       memorySize: 1536
       logLevel: INFO
-      geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionRequestQueue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/staging-clipSuggestion-aiSuggestionResultQueue
@@ -66,18 +77,14 @@ custom:
     prod:
       memorySize: 2048
       logLevel: INFO
-      geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionRequestQueue
       outputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/219825478644/production-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-production
-      
-  # デフォルト環境はdev
-  stage: ${opt:stage, 'dev'}
 
 functions:
   processDocument:
-    handler: handler.process_document
+    image: appimage # provider.ecr.images で定義したイメージ名
     events:
       - sqs:
           batchSize: 1
@@ -86,22 +93,4 @@ functions:
 resources:
   Resources: {}
 
-package:
-  patterns:
-    - '!node_modules/**'
-    - '!.venv/**'
-    - '!.env'
-    - '!.git/**'
-    - '!tests/**'
-    - '!.pytest_cache/**'
-
-plugins:
-  - serverless-python-requirements
-
-# Python依存関係の設定
-custom:
-  pythonRequirements:
-    dockerizePip: true
-    useDownloadCache: true
-    useStaticCache: true
-    layer: true
+plugins: []
