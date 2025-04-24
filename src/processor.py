@@ -109,7 +109,7 @@ def find_matching_word_sequence(target_value, sorted_words, field_type="text"):
             else:
                 normalized_combined_text_for_search = normalize_value(combined_text, "text")
                 if normalized_combined_text_for_search == normalized_target or normalized_target in normalized_combined_text_for_search:
-                     match = True
+                    match = True
             
             if match:
                 return sequence
@@ -150,8 +150,8 @@ def correct_bounding_boxes_recursive(data, ocr_words):
                 if isinstance(field_value, (int, float)) or re.match(r'^[\d,¥￥.]+$', str(field_value)):
                     field_type = "number"
                 elif isinstance(field_value, str) and re.search(r'\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?', field_value):
-                     field_type = "date"
-                     
+                    field_type = "date"
+
                 matching_sequence = find_matching_word_sequence(field_value, sorted_overlapping_words, field_type)
                 
                 if matching_sequence:
@@ -167,8 +167,8 @@ def correct_bounding_boxes_recursive(data, ocr_words):
                 corrected_data = data
 
             for key, value in data.items():
-                 if key not in ["value", "bbox"]:
-                     corrected_data[key] = correct_bounding_boxes_recursive(value, ocr_words)
+                if key not in ["value", "bbox"]:
+                    corrected_data[key] = correct_bounding_boxes_recursive(value, ocr_words)
             
             return corrected_data
 

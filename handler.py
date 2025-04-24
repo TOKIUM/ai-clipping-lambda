@@ -110,14 +110,14 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
                 # Check again if conversion resulted in unusable data
                 if not converted_ocr_data:
-                     logger.warning(f"OCR data became invalid after conversion for {object_key}. Skipping.")
-                     results.append({
-                         "file": object_key,
-                         "status": "skipped",
-                         "message_id": None,
-                         "error": "OCR data conversion failed or resulted in empty data"
-                     })
-                     continue
+                    logger.warning(f"OCR data became invalid after conversion for {object_key}. Skipping.")
+                    results.append({
+                        "file": object_key,
+                        "status": "skipped",
+                        "message_id": None,
+                        "error": "OCR data conversion failed or resulted in empty data"
+                    })
+                    continue
 
                 # LLMに渡すテキストと後処理用のOCRデータを準備
                 ocr_data_for_processor = converted_ocr_data

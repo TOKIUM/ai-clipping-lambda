@@ -93,9 +93,9 @@ def _process_element_to_dict(element):
 
     # 再帰的に子要素を処理 (word, symbolなど)
     if hasattr(element, 'words'):
-         element_dict['words'] = [_process_element_to_dict(word) for word in element.words]
+        element_dict['words'] = [_process_element_to_dict(word) for word in element.words]
     if hasattr(element, 'symbols'):
-         element_dict['symbols'] = [_process_element_to_dict(symbol) for symbol in element.symbols]
+        element_dict['symbols'] = [_process_element_to_dict(symbol) for symbol in element.symbols]
 
     return element_dict
 
@@ -117,7 +117,7 @@ def convert_single_response_bounding_box(response):
     if hasattr(response, 'full_text_annotation') and response.full_text_annotation:
         full_text_dict = {}
         if hasattr(response.full_text_annotation, 'text'):
-             full_text_dict['text'] = response.full_text_annotation.text
+            full_text_dict['text'] = response.full_text_annotation.text
 
         if hasattr(response.full_text_annotation, 'pages'):
             full_text_dict['pages'] = []

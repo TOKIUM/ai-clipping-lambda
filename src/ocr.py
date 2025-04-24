@@ -51,8 +51,8 @@ def extract_ocr_data_from_image(image_path):
         response = client.document_text_detection(image=image)
 
         if response.error.message:
-             logger.error(f"Vision API error for {image_path}: {response.error.message}")
-             raise Exception(
+            logger.error(f"Vision API error for {image_path}: {response.error.message}")
+            raise Exception(
                 '{}\nFor more info on error messages, check: '
                 'https://cloud.google.com/apis/design/errors'.format(
                     response.error.message))

@@ -27,8 +27,8 @@ def create_clip_item(field_name: str, value: Any, bbox: Optional[Dict[str, float
 
     # 座標値が負でないことを確認 (オプションだが推奨)
     if x_min < 0 or y_min < 0 or x_max < 0 or y_max < 0:
-         logger.warning(f"Negative coordinate values in bbox for field '{field_name}': {bbox}. Proceeding, but check OCR/LLM output.")
-         # ここでは処理を続けるが、ログには残す
+        logger.warning(f"Negative coordinate values in bbox for field '{field_name}': {bbox}. Proceeding, but check OCR/LLM output.")
+        # ここでは処理を続けるが、ログには残す
 
     clip_item = {
         "field_name": field_name,
@@ -82,11 +82,11 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
                     # --- マッピングルール ---
                     # 1. bank_details の下の要素は 'bank' にする
                     if parent_key.startswith("bank_details"):
-                         final_field_name = "bank"
+                        final_field_name = "bank"
                     # 2. tax_breakdown の中の特定フィールドは税率に応じて変更 (リスト処理側で対応)
                     #    ここでは tax_breakdown の中の value/bbox を持つ要素は処理しない想定
                     elif parent_key.startswith("tax_breakdown"):
-                         final_field_name = None # スキップ (リスト処理に任せる)
+                        final_field_name = None # スキップ (リスト処理に任せる)
 
 
                     if final_field_name:
@@ -111,31 +111,31 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
                     clips.extend(convert_to_clips_format_recursive(value, current_parent_key, current_page))
 
         else: # "value" と "bbox" を持たない辞書の場合、その中身を探索
-             for key, value in data.items():
-                 # 'page' キーは特別扱いしない
-                 current_key = f"{parent_key}.{key}" if parent_key else key
-                 # ページ情報を引き継いで再帰呼び出し
-                 clips.extend(convert_to_clips_format_recursive(value, current_key, current_page))
+            for key, value in data.items():
+                # 'page' キーは特別扱いしない
+                current_key = f"{parent_key}.{key}" if parent_key else key
+                # ページ情報を引き継いで再帰呼び出し
+                clips.extend(convert_to_clips_format_recursive(value, current_key, current_page))
 
     elif isinstance(data, list):
         # --- tax_breakdown リストの特別処理 ---
         if parent_key == "tax_breakdown":
             for item in data:
-                 # リストアイテムのページ情報を取得 (存在すれば)
-                 item_page = item.get("page", page) if isinstance(item, dict) else page
-                 if isinstance(item, dict) and "tax_rate" in item:
+                # リストアイテムのページ情報を取得 (存在すれば)
+                item_page = item.get("page", page) if isinstance(item, dict) else page
+                if isinstance(item, dict) and "tax_rate" in item:
                     tax_rate_data = item.get("tax_rate") # tax_rate が value/bbox を持つ辞書の場合がある
                     tax_rate = None
                     if isinstance(tax_rate_data, dict) and "value" in tax_rate_data:
                         try:
                             tax_rate = float(tax_rate_data["value"])
                         except (ValueError, TypeError):
-                             logger.warning(f"Could not parse tax_rate value: {tax_rate_data.get('value')}")
+                            logger.warning(f"Could not parse tax_rate value: {tax_rate_data.get('value')}")
                     elif isinstance(tax_rate_data, (int, float, str)): # 文字列の場合も考慮
-                         try:
-                             tax_rate = float(tax_rate_data)
-                         except (ValueError, TypeError):
-                             logger.warning(f"Could not parse tax_rate value: {tax_rate_data}")
+                        try:
+                            tax_rate = float(tax_rate_data)
+                        except (ValueError, TypeError):
+                            logger.warning(f"Could not parse tax_rate value: {tax_rate_data}")
 
 
                     rate_suffix = ""
@@ -151,7 +151,7 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
                         elif abs(tax_rate - 0.08) < 1e-9:
                             rate_suffix = "_for_8_percent"
                         elif abs(tax_rate - 0.0) < 1e-9:
-                             rate_suffix = "_for_0_percent" # 0% も追加
+                            rate_suffix = "_for_0_percent" # 0% も追加
 
                     if rate_suffix:
                         # 各金額フィールド (taxable_amount, amount_without_tax, tax_amount) を処理
@@ -167,13 +167,13 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
                                 if clip:
                                     clips.append(clip)
                     else:
-                         logger.debug(f"Tax rate ({tax_rate}) does not match 10%, 8%, or 0%. Skipping specific tax field mapping for item.")
-                         # 特定税率以外の項目も通常の再帰処理にかける場合
-                         # clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
+                        logger.debug(f"Tax rate ({tax_rate}) does not match 10%, 8%, or 0%. Skipping specific tax field mapping for item.")
+                        # 特定税率以外の項目も通常の再帰処理にかける場合
+                        # clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
 
-                 else:
-                     # tax_rate がない、または item が辞書でない場合、通常の再帰処理
-                     clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
+                else:
+                    # tax_rate がない、または item が辞書でない場合、通常の再帰処理
+                    clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
 
 
         else: # tax_breakdown 以外のリスト
@@ -225,63 +225,63 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
                     bbox_data = None
                     # position.bounding_box から x, y, width, height を抽出
                     if "position" in clip and "bounding_box" in clip["position"]:
-                         box_points = clip["position"]["bounding_box"]
-                         if len(box_points) == 4:
-                             # x, y は左上の座標 (min x, min y)
-                             x_min = min(p.get('x', float('inf')) for p in box_points)
-                             y_min = min(p.get('y', float('inf')) for p in box_points)
-                             x_max = max(p.get('x', float('-inf')) for p in box_points)
-                             y_max = max(p.get('y', float('-inf')) for p in box_points)
-                             # 有効な座標かチェック
-                             if all(v not in [float('inf'), float('-inf')] for v in [x_min, y_min, x_max, y_max]):
-                                 width = x_max - x_min
-                                 height = y_max - y_min
-                                 # 幅と高さが非負であることも確認
-                                 if width >= 0 and height >= 0:
-                                     bbox_data = {
-                                         "x_coordinate": x_min,
-                                         "y_coordinate": y_min,
-                                         "width": width,
-                                         "height": height,
-                                     }
+                        box_points = clip["position"]["bounding_box"]
+                        if len(box_points) == 4:
+                            # x, y は左上の座標 (min x, min y)
+                            x_min = min(p.get('x', float('inf')) for p in box_points)
+                            y_min = min(p.get('y', float('inf')) for p in box_points)
+                            x_max = max(p.get('x', float('-inf')) for p in box_points)
+                            y_max = max(p.get('y', float('-inf')) for p in box_points)
+                            # 有効な座標かチェック
+                            if all(v not in [float('inf'), float('-inf')] for v in [x_min, y_min, x_max, y_max]):
+                                width = x_max - x_min
+                                height = y_max - y_min
+                                # 幅と高さが非負であることも確認
+                                if width >= 0 and height >= 0:
+                                    bbox_data = {
+                                        "x_coordinate": x_min,
+                                        "y_coordinate": y_min,
+                                        "width": width,
+                                        "height": height,
+                                    }
 
                     if bbox_data:
-                         # --- bank フィールドの重複排除ロジック ---
-                         # field_name が 'bank' の場合、同じ bbox のクリップが既に追加されていないか確認
-                         is_duplicate_bank = False
-                         if clip.get("field_name") == "bank":
-                             # bbox情報をタプルに変換してセットで管理
-                             bbox_tuple = (
-                                 bbox_data["x_coordinate"],
-                                 bbox_data["y_coordinate"],
-                                 bbox_data["width"],
-                                 bbox_data["height"],
-                                 clip.get("page", 0) # ページも考慮
-                             )
-                             if bbox_tuple in processed_bank_bboxes:
-                                 is_duplicate_bank = True
-                                 logger.debug(f"Skipping duplicate bank clip for bbox: {bbox_tuple}")
-                             else:
-                                 processed_bank_bboxes.add(bbox_tuple)
+                        # --- bank フィールドの重複排除ロジック ---
+                        # field_name が 'bank' の場合、同じ bbox のクリップが既に追加されていないか確認
+                        is_duplicate_bank = False
+                        if clip.get("field_name") == "bank":
+                            # bbox情報をタプルに変換してセットで管理
+                            bbox_tuple = (
+                                bbox_data["x_coordinate"],
+                                bbox_data["y_coordinate"],
+                                bbox_data["width"],
+                                bbox_data["height"],
+                                clip.get("page", 0) # ページも考慮
+                            )
+                            if bbox_tuple in processed_bank_bboxes:
+                                is_duplicate_bank = True
+                                logger.debug(f"Skipping duplicate bank clip for bbox: {bbox_tuple}")
+                            else:
+                                processed_bank_bboxes.add(bbox_tuple)
 
-                         if not is_duplicate_bank:
-                             formatted_clip = {
-                                 "field_name": clip.get("field_name"),
-                                 "x_coordinate": bbox_data["x_coordinate"],
-                                 "y_coordinate": bbox_data["y_coordinate"],
-                                 "width": bbox_data["width"],
-                                 "height": bbox_data["height"],
-                                 "page": clip.get("page", 0), # 内部クリップからページ情報を取得
-                                 "reliability_score": clip.get("confidence") # confidence を reliability_score にマッピング
-                             }
-                             # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
-                             if formatted_clip["reliability_score"] is None:
-                                 # del formatted_clip["reliability_score"] # またはデフォルト値設定
-                                 pass # None のままにする
+                        if not is_duplicate_bank:
+                            formatted_clip = {
+                                "field_name": clip.get("field_name"),
+                                "x_coordinate": bbox_data["x_coordinate"],
+                                "y_coordinate": bbox_data["y_coordinate"],
+                                "width": bbox_data["width"],
+                                "height": bbox_data["height"],
+                                "page": clip.get("page", 0), # 内部クリップからページ情報を取得
+                                "reliability_score": clip.get("confidence") # confidence を reliability_score にマッピング
+                            }
+                            # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
+                            if formatted_clip["reliability_score"] is None:
+                                # del formatted_clip["reliability_score"] # またはデフォルト値設定
+                                pass # None のままにする
 
-                             formatted_clips.append(formatted_clip)
+                            formatted_clips.append(formatted_clip)
                     else:
-                         logger.warning(f"Could not format clip due to invalid or missing bbox for field '{clip.get('field_name')}': {clip.get('position')}")
+                        logger.warning(f"Could not format clip due to invalid or missing bbox for field '{clip.get('field_name')}': {clip.get('position')}")
 
 
                 if formatted_clips:
