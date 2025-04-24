@@ -10,7 +10,7 @@ provider:
   runtime: python3.12
   region: ${opt:region, 'ap-northeast-1'}
   memorySize: ${self:custom.environments.${self:provider.stage}.memorySize}
-  timeout: ${self:custom.environments.${self:provider.stage}.timeout}
+  timeout: 900
   
   # 環境変数の設定
   environment:
@@ -47,7 +47,6 @@ custom:
   environments:
     dev:
       memorySize: 1024
-      timeout: 300
       logLevel: DEBUG
       geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionRequestQueue
@@ -57,7 +56,6 @@ custom:
       
     staging:
       memorySize: 1536
-      timeout: 360
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionRequestQueue
@@ -67,7 +65,6 @@ custom:
       
     prod:
       memorySize: 2048
-      timeout: 420
       logLevel: INFO
       geminiModel: gemini-2.0-flash
       inputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionRequestQueue
