@@ -12,22 +12,18 @@ provider:
   memorySize: ${self:custom.environments.${self:provider.stage}.memorySize}
   timeout: 900
   
-  # コンテナイメージの設定を追加
   ecr:
     images:
       appimage:
         path: ./
-        # Dockerfile名を指定する場合 (デフォルトは Dockerfile)
-        # file: Dockerfile 
-        # ビルド引数を渡す場合
-        # buildArgs:
-        #   MY_VAR: my_value
+        platform: linux/amd64
+        file: Dockerfile 
 
   # 環境変数の設定
   environment:
     ENVIRONMENT: ${self:provider.stage}
     LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
-    OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
+    # OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
     GEMINI_MODEL: gemini-2.0-flash
     GOOGLE_CLOUD_REGION: us-central1
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
@@ -40,20 +36,18 @@ provider:
       Action:
         - s3:GetObject
       Resource: "arn:aws:s3:::${self:custom.environments.${self:provider.stage}.bucketName}/*"
-    
-    # 入力SQSへのアクセス権限
+    # 作成する入力SQSへのアクセス権限を追加
     - Effect: Allow
       Action:
         - sqs:ReceiveMessage
         - sqs:DeleteMessage
         - sqs:GetQueueAttributes
-      Resource: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
-    
-    # 出力SQSへのアクセス権限
+      Resource: !GetAtt InputQueue.Arn # 作成するキューのARNを参照
+    # 作成するデッドレターキューへの送信権限を追加
     - Effect: Allow
       Action:
         - sqs:SendMessage
-      Resource: ${self:custom.environments.${self:provider.stage}.outputQueueArn}
+      Resource: !GetAtt InputQueueDLQ.Arn # 作成するDLQのARNを参照
 
 custom:
   # 環境ごとの設定
@@ -61,36 +55,56 @@ custom:
     dev:
       memorySize: 1024
       logLevel: DEBUG
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionRequestQueue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionResultQueue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/development-clipSuggestion-aiSuggestionResultQueue
+      inputQueueName: ${self:provider.stage}-${self:service}-input-queue
+      inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
+      # outputQueueArn: ... # コメントアウトのまま
+      # outputQueueUrl: ... # コメントアウトのまま
       bucketName: national-tax-document-clipping-development
       
     staging:
-      memorySize: 1536
+      memorySize: 1024
       logLevel: INFO
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionRequestQueue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionResultQueue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/staging-clipSuggestion-aiSuggestionResultQueue
+      inputQueueName: ${self:provider.stage}-${self:service}-input-queue
+      inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
+      # outputQueueArn: ... # コメントアウトのまま
+      # outputQueueUrl: ... # コメントアウトのまま
       bucketName: national-tax-document-clipping-staging
       
     prod:
-      memorySize: 2048
+      memorySize: 1024
       logLevel: INFO
-      inputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionRequestQueue
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionResultQueue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/219825478644/production-clipSuggestion-aiSuggestionResultQueue
+      inputQueueName: ${self:provider.stage}-${self:service}-input-queue
+      inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
+      # outputQueueArn: ... # コメントアウトのまま
+      # outputQueueUrl: ... # コメントアウトのまま
       bucketName: national-tax-document-clipping-production
 
 functions:
   processDocument:
-    image: appimage # provider.ecr.images で定義したイメージ名
+    image: appimage
     events:
       - sqs:
           batchSize: 1
-          arn: ${self:custom.environments.${self:provider.stage}.inputQueueArn}
+          arn: !GetAtt InputQueue.Arn # 作成するキューのARNを参照
 
 resources:
-  Resources: {}
+  Resources:
+    InputQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.environments.${self:provider.stage}.inputQueueName}
+        # デッドレターキューの設定を追加
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt InputQueueDLQ.Arn
+          maxReceiveCount: 3 # メッセージがDLQに移動するまでの最大受信回数
+        # Lambdaのタイムアウト + 1分のバッファ
+        VisibilityTimeout: 960
+
+    InputQueueDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.environments.${self:provider.stage}.inputDLQName}
+        # DLQのメッセージ保持期間 (例: 14日間)
+        MessageRetentionPeriod: 1209600
 
 plugins: []

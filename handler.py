@@ -41,7 +41,7 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     5. SQSへ結果送信
     """
     logger.info("Processing started")
-
+    logger.debug(f"Event: {event}")
     try:
         # SQSからのメッセージを解析
         records = event.get('Records', [])
