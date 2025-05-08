@@ -42,16 +42,16 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
         "tax_rate": {
           "value": float,  # 税率（例: 0.10 = 10%）
         },
-        "amount_include_tax": {
-          "value": float,  # 税込金額
+        "amount_consumption_tax": {
+          "value": float,  # 消費税などの税にかかわる金額
           "bbox": {"x": float, "y": float, "width": float, "height": float}
         },
         "amount_exclude_tax": {
-          "value": float,  # 税抜額
+          "value": float,  # 消費税等を含まない税抜きの金額
           "bbox": {"x": float, "y": float, "width": float, "height": float}
         },
-        "amount_consumption_tax": {
-          "value": float,  # 消費税額
+        "amount_include_tax": {
+          "value": float,  # 消費税等を含んだ税込の金額(税額ごとの記載がなければtotalの金額を入れる)
           "bbox": {"x": float, "y": float, "width": float, "height": float}
         }
       },

@@ -60,122 +60,153 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
     current_page = data.get("page", page) if isinstance(data, dict) else page
 
     if isinstance(data, dict):
-        # "value" と "bbox" を持つフィールドを探索
-        if "value" in data and "bbox" in data:
-            if data["bbox"] is not None:
-                # フィールド名を決定: 'name' キーがあればそれを使用、なければ親キーを使用
-                field_name_part = data.get('name') # 'name' は通常、リスト内の要素のキー (例: 'bank_name')
-                # 親キーと name から基本的なフィールド名を構築
-                if parent_key and field_name_part:
-                    base_field_name = f"{parent_key}.{field_name_part}"
-                elif field_name_part:
-                    base_field_name = field_name_part
-                elif parent_key:
-                    base_field_name = parent_key
-                else:
-                    base_field_name = None
-                    logger.warning(f"Could not determine base field name for data: {data}. Skipping clip item.")
+        # "value" と "bbox" を持つフィールド、または parent_key が "bank_details" で "bbox" を持つフィールドを探索
+        should_process_as_clip_candidate = False
+        if "bbox" in data and data["bbox"] is not None:
+            if "value" in data:
+                should_process_as_clip_candidate = True
+            elif parent_key == "bank_details": # bank_details の bbox を持つコンテナ自体をクリップ対象とする
+                should_process_as_clip_candidate = True
 
-                if base_field_name:
-                    final_field_name = base_field_name # デフォルト
+        if should_process_as_clip_candidate:
+            # フィールド名を決定: 'name' キーがあればそれを使用、なければ親キーを使用
+            field_name_part = data.get('name') # 'name' は通常、リスト内の要素のキー (例: 'bank_name')
+            # 親キーと name から基本的なフィールド名を構築
+            if parent_key and field_name_part:
+                base_field_name = f"{parent_key}.{field_name_part}"
+            elif field_name_part:
+                base_field_name = field_name_part
+            elif parent_key:
+                base_field_name = parent_key
+            else:
+                base_field_name = None
+                logger.warning(f"Could not determine base field name for data: {data}. Skipping clip item.")
 
-                    # --- マッピングルール ---
-                    # 1. bank_details の下の要素は 'bank' にする
-                    if parent_key.startswith("bank_details"):
-                        final_field_name = "bank"
-                    # 2. tax_breakdown の中の特定フィールドは税率に応じて変更 (リスト処理側で対応)
-                    #    ここでは tax_breakdown の中の value/bbox を持つ要素は処理しない想定
-                    elif parent_key.startswith("tax_breakdown"):
-                        final_field_name = None # スキップ (リスト処理に任せる)
+            if base_field_name:
+                final_field_name = base_field_name
+                logger.info(f"base_field_name: {base_field_name}")
+                # --- マッピングルール ---
+                # bank_details の下の value/bbox を持つ要素はクリップしない (bank_details 自体の bbox を使うため)
+                if parent_key.startswith("bank_details") and base_field_name != "bank_details":
+                    logger.info(f"Skipping direct clip for {base_field_name} under bank_details, using bank_details.bbox instead.")
+                    final_field_name = None
+                elif base_field_name == "bank_details": # bank_details 自体の場合
+                    logger.info(f"base_field_name: {base_field_name}")
+                    final_field_name = "bank" # field_name を 'bank' にする
+                # amount_info.tax_breakdown の中の個別の金額項目はリスト処理側で処理
+                elif base_field_name.startswith("amount_info.tax_breakdown.") and \
+                     any(base_field_name.endswith("." + suffix) for suffix in ["amount_include_tax", "amount_exclude_tax", "tax_amount", "taxable_amount", "tax_rate"]):
+                    logger.debug(f"Skipping direct clip for {base_field_name}, handled by tax_breakdown list logic.")
+                    final_field_name = None
+                elif base_field_name == "amount_info.amount_withholding":
+                    final_field_name = "withholding_tax_amount"
+                elif base_field_name == "amount_info.tax_free_amount":
+                    final_field_name = "taxable_amount_for_0_percent"
 
+                if final_field_name:
+                    clip = create_clip_item(
+                        field_name=final_field_name,
+                        value=data.get("value"),
+                        bbox=data.get("bbox"),
+                        confidence=data.get("confidence"),
+                        page=current_page # ページ情報を渡す
+                    )
+                    if clip:
+                        # 'bank' フィールドの重複を避けるかどうかの考慮
+                        # 現状では重複を許容（複数の銀行情報 bbox があれば複数クリップされる）
+                        clips.append(clip)
 
-                    if final_field_name:
-                        clip = create_clip_item(
-                            field_name=final_field_name,
-                            value=data.get("value"),
-                            bbox=data.get("bbox"),
-                            confidence=data.get("confidence"),
-                            page=current_page # ページ情報を渡す
-                        )
-                        if clip:
-                            # 'bank' フィールドの重複を避けるかどうかの考慮
-                            # 現状では重複を許容（複数の銀行情報 bbox があれば複数クリップされる）
-                            clips.append(clip)
-
-            # valueやbbox以外のキーも再帰的に探索
-            for key, value in data.items():
-                # 'value', 'bbox', 'confidence', 'name', 'page' は既に処理済みか、キーとして使用しない
-                if key not in ["value", "bbox", "confidence", "name", "page"]:
-                    current_parent_key = f"{parent_key}.{key}" if parent_key else key
-                    # ページ情報を引き継いで再帰呼び出し
-                    clips.extend(convert_to_clips_format_recursive(value, current_parent_key, current_page))
-
-        else: # "value" と "bbox" を持たない辞書の場合、その中身を探索
-            for key, value in data.items():
-                # 'page' キーは特別扱いしない
-                current_key = f"{parent_key}.{key}" if parent_key else key
+        # valueやbbox以外のキーも再帰的に探索
+        for key, value in data.items():
+            # 'value', 'bbox', 'confidence', 'name', 'page' は既に処理済みか、キーとして使用しない
+            if key not in ["value", "bbox", "confidence", "name", "page"]:
+                current_parent_key = f"{parent_key}.{key}" if parent_key else key
                 # ページ情報を引き継いで再帰呼び出し
-                clips.extend(convert_to_clips_format_recursive(value, current_key, current_page))
+                clips.extend(convert_to_clips_format_recursive(value, current_parent_key, current_page))
 
     elif isinstance(data, list):
         # --- tax_breakdown リストの特別処理 ---
-        if parent_key == "tax_breakdown":
+        if parent_key == "amount_info.tax_breakdown": # ★ parent_key の条件を修正
             for item in data:
-                # リストアイテムのページ情報を取得 (存在すれば)
                 item_page = item.get("page", page) if isinstance(item, dict) else page
                 if isinstance(item, dict) and "tax_rate" in item:
-                    tax_rate_data = item.get("tax_rate") # tax_rate が value/bbox を持つ辞書の場合がある
+                    tax_rate_data = item.get("tax_rate")
                     tax_rate = None
                     if isinstance(tax_rate_data, dict) and "value" in tax_rate_data:
                         try:
                             tax_rate = float(tax_rate_data["value"])
                         except (ValueError, TypeError):
                             logger.warning(f"Could not parse tax_rate value: {tax_rate_data.get('value')}")
-                    elif isinstance(tax_rate_data, (int, float, str)): # 文字列の場合も考慮
+                    elif isinstance(tax_rate_data, (int, float, str)):
                         try:
                             tax_rate = float(tax_rate_data)
                         except (ValueError, TypeError):
                             logger.warning(f"Could not parse tax_rate value: {tax_rate_data}")
 
-
                     rate_suffix = ""
-                    field_prefix_map = {
-                        "taxable_amount": "taxable_amount",
-                        "amount_without_tax": "amount_without_tax",
-                        "tax_amount": "tax_amount"
-                    }
-                    # 税率の比較は浮動小数点数の誤差を考慮する (例: 0.1 と 0.08)
                     if tax_rate is not None:
                         if abs(tax_rate - 0.1) < 1e-9:
                             rate_suffix = "_for_10_percent"
                         elif abs(tax_rate - 0.08) < 1e-9:
                             rate_suffix = "_for_8_percent"
                         elif abs(tax_rate - 0.0) < 1e-9:
-                            rate_suffix = "_for_0_percent" # 0% も追加
+                            rate_suffix = "_for_0_percent"
 
                     if rate_suffix:
-                        # 各金額フィールド (taxable_amount, amount_without_tax, tax_amount) を処理
-                        for field_key, target_field_name_base in field_prefix_map.items():
-                            if field_key in item and isinstance(item[field_key], dict) and "value" in item[field_key] and "bbox" in item[field_key]:
+                        # Handle taxable_amount (preferring amount_include_tax)
+                        if "amount_include_tax" in item and \
+                           isinstance(item.get("amount_include_tax"), dict) and \
+                           "value" in item["amount_include_tax"] and \
+                           "bbox" in item["amount_include_tax"]:
+                            clip = create_clip_item(
+                                field_name=f"taxable_amount{rate_suffix}",
+                                value=item["amount_include_tax"].get("value"),
+                                bbox=item["amount_include_tax"].get("bbox"),
+                                confidence=item["amount_include_tax"].get("confidence"),
+                                page=item_page
+                            )
+                            if clip:
+                                clips.append(clip)
+                        elif "taxable_amount" in item and \
+                             isinstance(item.get("taxable_amount"), dict) and \
+                             "value" in item["taxable_amount"] and \
+                             "bbox" in item["taxable_amount"]: # Fallback to taxable_amount
+                            clip = create_clip_item(
+                                field_name=f"taxable_amount{rate_suffix}",
+                                value=item["taxable_amount"].get("value"),
+                                bbox=item["taxable_amount"].get("bbox"),
+                                confidence=item["taxable_amount"].get("confidence"),
+                                page=item_page
+                            )
+                            if clip:
+                                clips.append(clip)
+
+                        # Handle amount_consumption_tax and amount_exclude_tax
+                        tax_item_field_map = {
+                            "amount_consumption_tax": "tax_amount",
+                            "amount_exclude_tax": "amount_without_tax"
+                        }
+                        for source_field, target_base_field in tax_item_field_map.items():
+                            if source_field in item and \
+                               isinstance(item.get(source_field), dict) and \
+                               "value" in item[source_field] and \
+                               "bbox" in item[source_field]:
                                 clip = create_clip_item(
-                                    field_name=f"{target_field_name_base}{rate_suffix}",
-                                    value=item[field_key].get("value"),
-                                    bbox=item[field_key].get("bbox"),
-                                    confidence=item[field_key].get("confidence"),
-                                    page=item_page # アイテムごとのページ情報
+                                    field_name=f"{target_base_field}{rate_suffix}",
+                                    value=item[source_field].get("value"),
+                                    bbox=item[source_field].get("bbox"),
+                                    confidence=item[source_field].get("confidence"),
+                                    page=item_page
                                 )
                                 if clip:
                                     clips.append(clip)
                     else:
-                        logger.debug(f"Tax rate ({tax_rate}) does not match 10%, 8%, or 0%. Skipping specific tax field mapping for item.")
-                        # 特定税率以外の項目も通常の再帰処理にかける場合
+                        logger.debug(f"Tax rate ({tax_rate}) does not match 10%, 8%, or 0%. Skipping specific tax field mapping for item: {item}")
+                        # 必要であれば、ここで item 内の他のフィールドを汎用クリップとして処理するロジックを追加
                         # clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
 
-                else:
-                    # tax_rate がない、または item が辞書でない場合、通常の再帰処理
+                else: # tax_rate がない、または item が辞書でない場合
                     clips.extend(convert_to_clips_format_recursive(item, parent_key, item_page))
-
-
         else: # tax_breakdown 以外のリスト
             for index, item in enumerate(data):
                 # リスト内の要素を再帰的に処理。親キーとページ情報を引き継ぐ
@@ -246,40 +277,47 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
                                     }
 
                     if bbox_data:
-                        # --- bank フィールドの重複排除ロジック ---
-                        # field_name が 'bank' の場合、同じ bbox のクリップが既に追加されていないか確認
-                        is_duplicate_bank = False
-                        if clip.get("field_name") == "bank":
-                            # bbox情報をタプルに変換してセットで管理
-                            bbox_tuple = (
-                                bbox_data["x_coordinate"],
-                                bbox_data["y_coordinate"],
-                                bbox_data["width"],
-                                bbox_data["height"],
-                                clip.get("page", 0) # ページも考慮
-                            )
-                            if bbox_tuple in processed_bank_bboxes:
-                                is_duplicate_bank = True
-                                logger.debug(f"Skipping duplicate bank clip for bbox: {bbox_tuple}")
-                            else:
-                                processed_bank_bboxes.add(bbox_tuple)
+                        # Bbox の値がすべて0の場合はスキップ
+                        if bbox_data["x_coordinate"] == 0.0 and \
+                           bbox_data["y_coordinate"] == 0.0 and \
+                           bbox_data["width"] == 0.0 and \
+                           bbox_data["height"] == 0.0:
+                            logger.info(f"Skipping clip for field '{clip.get('field_name')}' because its bbox is all zeros.")
+                        else:
+                            # --- bank フィールドの重複排除ロジック ---
+                            # field_name が 'bank' の場合、同じ bbox のクリップが既に追加されていないか確認
+                            is_duplicate_bank = False
+                            if clip.get("field_name") == "bank":
+                                # bbox情報をタプルに変換してセットで管理
+                                bbox_tuple = (
+                                    bbox_data["x_coordinate"],
+                                    bbox_data["y_coordinate"],
+                                    bbox_data["width"],
+                                    bbox_data["height"],
+                                    clip.get("page", 0) # ページも考慮
+                                )
+                                if bbox_tuple in processed_bank_bboxes:
+                                    is_duplicate_bank = True
+                                    logger.debug(f"Skipping duplicate bank clip for bbox: {bbox_tuple}")
+                                else:
+                                    processed_bank_bboxes.add(bbox_tuple)
 
-                        if not is_duplicate_bank:
-                            formatted_clip = {
-                                "field_name": clip.get("field_name"),
-                                "x_coordinate": bbox_data["x_coordinate"],
-                                "y_coordinate": bbox_data["y_coordinate"],
-                                "width": bbox_data["width"],
-                                "height": bbox_data["height"],
-                                "page": clip.get("page", 0), # 内部クリップからページ情報を取得
-                                "reliability_score": clip.get("confidence") # confidence を reliability_score にマッピング
-                            }
-                            # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
-                            if formatted_clip["reliability_score"] is None:
-                                # del formatted_clip["reliability_score"] # またはデフォルト値設定
-                                pass # None のままにする
+                            if not is_duplicate_bank:
+                                formatted_clip = {
+                                    "field_name": clip.get("field_name"),
+                                    "x_coordinate": bbox_data["x_coordinate"],
+                                    "y_coordinate": bbox_data["y_coordinate"],
+                                    "width": bbox_data["width"],
+                                    "height": bbox_data["height"],
+                                    "page": clip.get("page", 0), # 内部クリップからページ情報を取得
+                                    "reliability_score": clip.get("confidence") # confidence を reliability_score にマッピング
+                                }
+                                # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
+                                if formatted_clip["reliability_score"] is None:
+                                    # del formatted_clip["reliability_score"] # またはデフォルト値設定
+                                    pass # None のままにする
 
-                            formatted_clips.append(formatted_clip)
+                                formatted_clips.append(formatted_clip)
                     else:
                         logger.warning(f"Could not format clip due to invalid or missing bbox for field '{clip.get('field_name')}': {clip.get('position')}")
 
