@@ -28,6 +28,7 @@ provider:
     GOOGLE_CLOUD_REGION: us-central1
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
     S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.bucketName}
+    LLM_OUTPUT_S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.llmOutputBucketName}
   
   # IAMロールの設定
   iamRoleStatements:
@@ -36,6 +37,11 @@ provider:
       Action:
         - s3:GetObject
       Resource: "arn:aws:s3:::${self:custom.environments.${self:provider.stage}.bucketName}/*"
+    # LLM出力S3バケットへの書き込み権限を追加
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+      Resource: "arn:aws:s3:::${self:custom.environments.${self:provider.stage}.llmOutputBucketName}/*"
     # 作成する入力SQSへのアクセス権限を追加
     - Effect: Allow
       Action:
@@ -60,6 +66,7 @@ custom:
       outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/development-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-development
+      llmOutputBucketName: ${self:provider.stage}-llm-output-${self:service}
       
     staging:
       memorySize: 1024
@@ -69,6 +76,7 @@ custom:
       outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/staging-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-staging
+      llmOutputBucketName: ${self:provider.stage}-llm-output-${self:service}
       
     prod:
       memorySize: 1024
@@ -78,6 +86,7 @@ custom:
       outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:production-clipSuggestion-aiSuggestionResultQueue
       outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/production-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-production
+      llmOutputBucketName: ${self:provider.stage}-llm-output-${self:service}
 
 functions:
   processDocument:
@@ -106,5 +115,19 @@ resources:
         QueueName: ${self:custom.environments.${self:provider.stage}.inputDLQName}
         # DLQのメッセージ保持期間 (例: 14日間)
         MessageRetentionPeriod: 1209600
+
+    LlmOutputBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.environments.${self:provider.stage}.llmOutputBucketName}
+        # 必要に応じて、バージョニング、アクセスコントロール、ライフサイクルルールなどをここに追加します。
+        # 例:
+        # VersioningConfiguration:
+        #   Status: Enabled
+        # PublicAccessBlockConfiguration:
+        #   BlockPublicAcls: true
+        #   IgnorePublicAcls: true
+        #   BlockPublicPolicy: true
+        #   RestrictPublicBuckets: true
 
 plugins: []

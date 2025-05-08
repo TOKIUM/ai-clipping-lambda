@@ -9,6 +9,7 @@ from src.formatter import format_sqs_message
 from src.sqs_sender import send_to_queue
 from src.utils.logger import setup_logger
 from src.utils.helper import convert_bounding_box_format
+from src.s3_uploader import upload_to_s3  # 追加
 
 logger = setup_logger()
 
@@ -124,6 +125,20 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                             continue
 
                         extracted_info = extract_information(ocr_data_for_processor)
+
+                        # LLM処理結果とOCR結果を結合
+                        combined_output = {
+                            "llm_output": extracted_info,
+                            "ocr_output": ocr_response
+                        }
+
+                        # LLM処理結果をS3にアップロード
+                        llm_output_bucket_name = os.environ.get('LLM_OUTPUT_S3_BUCKET_NAME')
+                        if llm_output_bucket_name:
+                            llm_output_s3_key = f"llm_outputs/{clipping_request_id_from_message}/{object_key}_combined_output.json"
+                            upload_to_s3(json.dumps(combined_output, ensure_ascii=False), llm_output_bucket_name, llm_output_s3_key)
+                        else:
+                            logger.warning("LLM_OUTPUT_S3_BUCKET_NAME environment variable is not set. Skipping LLM output upload to S3.")
 
                         current_clipping_request_id_for_processor = clipping_request_id_from_message or \
                                                                     (context.aws_request_id if hasattr(context, 'aws_request_id') else "unknown_request_id")
