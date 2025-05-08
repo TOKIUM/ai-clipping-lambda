@@ -74,6 +74,7 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 for image_info in image_urls:
                     object_key = image_info.get('s3_key')
                     image_index = image_info.get('index', 'N/A')
+                    local_file_path = None  # Initialize local_file_path
 
                     if not object_key:
                         logger.warning(f"Missing s3_key in image_info (index: {image_index}) for request: {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}. Image Info: {image_info}")
@@ -128,8 +129,9 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                                                     (context.aws_request_id if hasattr(context, 'aws_request_id') else "unknown_request_id")
 
                         processed_data = process_extracted_data(extracted_info, ocr_response, current_clipping_request_id_for_processor, object_key)
+                        logger.info(f"Processed data for {object_key} (index: {image_index}): {processed_data}")
 
-                        final_sqs_message = format_sqs_message(processed_data, object_key)
+                        final_sqs_message = format_sqs_message(processed_data, clipping_request_id_from_message, object_key)
                         message_id_sent = send_to_queue(final_sqs_message)
 
                         results.append({
@@ -141,8 +143,15 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
                     except Exception as e_s3_item:
                         logger.exception(f"Error processing s3_key {object_key} (index: {image_index}) for request {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}: {str(e_s3_item)}")
+                        # Re-raise the exception after logging, to be caught by the outer try-except
                         raise e_s3_item
-
+                    finally:
+                        if local_file_path and os.path.exists(local_file_path):
+                            try:
+                                os.remove(local_file_path)
+                                logger.info(f"Successfully deleted temporary file: {local_file_path}")
+                            except OSError as e_remove:
+                                logger.error(f"Error deleting temporary file {local_file_path}: {str(e_remove)}")
             except Exception as e_sqs_record:
                 logger.exception(f"Error processing SQS record (Message ID: {current_sqs_message_id}): {str(e_sqs_record)}")
                 raise e_sqs_record
