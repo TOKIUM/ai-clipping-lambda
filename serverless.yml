@@ -57,8 +57,8 @@ custom:
       logLevel: DEBUG
       inputQueueName: ${self:provider.stage}-${self:service}-input-queue
       inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
-      # outputQueueArn: ... # コメントアウトのまま
-      # outputQueueUrl: ... # コメントアウトのまま
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:development-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/development-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-development
       
     staging:
@@ -66,8 +66,8 @@ custom:
       logLevel: INFO
       inputQueueName: ${self:provider.stage}-${self:service}-input-queue
       inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
-      # outputQueueArn: ... # コメントアウトのまま
-      # outputQueueUrl: ... # コメントアウトのまま
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:staging-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/staging-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-staging
       
     prod:
@@ -75,8 +75,8 @@ custom:
       logLevel: INFO
       inputQueueName: ${self:provider.stage}-${self:service}-input-queue
       inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
-      # outputQueueArn: ... # コメントアウトのまま
-      # outputQueueUrl: ... # コメントアウトのまま
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:production-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/production-clipSuggestion-aiSuggestionResultQueue
       bucketName: national-tax-document-clipping-production
 
 functions:
