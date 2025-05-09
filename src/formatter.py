@@ -244,7 +244,7 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
             corrected_data = processed_data["corrected_data"]
             # 内部形式のクリップリストを生成 (ページ情報は corrected_data のトップレベルにある想定)
             # TODO: ページ情報がどこから来るか確認・調整が必要
-            initial_page = corrected_data.get("page", 0) if isinstance(corrected_data, dict) else 0
+            initial_page = corrected_data.get("page", 1) if isinstance(corrected_data, dict) else 1
             internal_clips = convert_to_clips_format_recursive(corrected_data, page=initial_page)
 
             if internal_clips:
