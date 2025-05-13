@@ -5,8 +5,8 @@
 tax_breakdownとbank_detailsに関しては、それぞれの項目に関する情報の塊のBounding Boxを返してください。
 
 {
-  "issuer_phone_number": { # 書類発行者の電話番号
-    "value": str,  # 電話番号の値
+  "phone_number": { # 書類発行者の電話番号
+    "value": str,  # 項目に関係する値
     "bbox": {      # 検出位置情報
       "x": float,      # 左上のX座標
       "y": float,      # 左上のY座標
@@ -61,10 +61,6 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
   "due_date": {
     "value": str,  # 支支払期日/口座振替日。請求日の月末に振り込むなど特定の日付がない場合でも、その範囲のBounding Boxを返してください。
     "bbox": {"x": float, "y": float, "width": float, "height": float}
-  },
-  "due_date_sub_info": {
-    "value": str,  # 請求日の月末に振り込むなど特定の日付がない場合のみ利用してください。ここで扱う情報は、支払期日の情報を補足するものであり、請求日、書類発行日を返してください。(due_dateが日付の形でない場合)
-      "bbox": {"x": float, "y": float, "width": float, "height": float}
   },
   "bank_details": { # 銀行情報, 銀行名など内部の記述がない場合はbboxを0で返してください。
     "bank_name": {

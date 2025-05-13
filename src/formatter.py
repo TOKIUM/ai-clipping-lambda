@@ -309,8 +309,8 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
                                     "y_coordinate": bbox_data["y_coordinate"],
                                     "width": bbox_data["width"],
                                     "height": bbox_data["height"],
-                                    "page": clip.get("page", 0), # 内部クリップからページ情報を取得
-                                    "reliability_score": clip.get("confidence") # confidence を reliability_score にマッピング
+                                    "page": clip.get("page", 1), # 内部クリップからページ情報を取得
+                                    "reliability_score": clip.get("confidence", 1) # confidence を reliability_score にマッピング
                                 }
                                 # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
                                 if formatted_clip["reliability_score"] is None:
