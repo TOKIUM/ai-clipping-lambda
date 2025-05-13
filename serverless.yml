@@ -23,7 +23,7 @@ provider:
   environment:
     ENVIRONMENT: ${self:provider.stage}
     LOG_LEVEL: ${self:custom.environments.${self:provider.stage}.logLevel}
-    # OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
+    OUTPUT_QUEUE_URL: ${self:custom.environments.${self:provider.stage}.outputQueueUrl}
     GEMINI_MODEL: gemini-2.0-flash
     GOOGLE_CLOUD_REGION: us-central1
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
@@ -54,6 +54,11 @@ provider:
       Action:
         - sqs:SendMessage
       Resource: !GetAtt InputQueueDLQ.Arn # 作成するDLQのARNを参照
+    # outputQueueArn への送信権限を追加
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource: ${self:custom.environments.${self:provider.stage}.outputQueueArn}
 
 custom:
   # 環境ごとの設定

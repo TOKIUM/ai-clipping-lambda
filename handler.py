@@ -66,7 +66,7 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 logger.info(f"Processing SQS message body: {message_body} (Message ID: {current_sqs_message_id})")
 
                 clipping_request_id_from_message = message_body.get("clipping_request_id")
-                image_urls = message_body.get('image_urls', [])
+                image_urls = message_body.get('images', [])
 
                 if not image_urls:
                     logger.warning(f"No image_urls found in message body for SQS message ID: {current_sqs_message_id}. Body: {message_body_str}")
@@ -80,7 +80,7 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     if not object_key:
                         logger.warning(f"Missing s3_key in image_info (index: {image_index}) for request: {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}. Image Info: {image_info}")
                         raise ValueError(f"Missing s3_key in image_info (index: {image_index}) for request: {clipping_request_id_from_message}")
-
+                    # S3から画像/PDFをダウンロード
                     try:
                         logger.info(f"Processing s3_key: {object_key} (index: {image_index}) for request: {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}")
 
@@ -96,7 +96,12 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                 "error": "No text detected by OCR"
                             })
                             continue
-
+                    except Exception as e_s3_item:
+                        logger.exception(f"Error processing s3_key {object_key} (index: {image_index}) for request {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}: {str(e_s3_item)}")
+                        # Re-raise the exception after logging, to be caught by the outer try-except
+                        raise e_s3_item
+                    # OCRレスポンスを変換
+                    try:
                         converted_ocr_data = convert_bounding_box_format(ocr_response)
 
                         if not converted_ocr_data:
@@ -108,38 +113,33 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                 "error": "OCR data conversion failed or resulted in empty data"
                             })
                             continue
+                        logger.info(f"Converted OCR data for {object_key} (index: {image_index}): {converted_ocr_data}")
 
-                        ocr_data_for_processor = converted_ocr_data
-                        if isinstance(converted_ocr_data, list):
-                            ocr_data_for_processor = converted_ocr_data
-                        elif hasattr(converted_ocr_data, 'full_text_annotation') and converted_ocr_data.full_text_annotation:
-                            ocr_data_for_processor = converted_ocr_data
-                        else:
-                            logger.warning(f"Unexpected OCR response format or no text annotation for {object_key} (index: {image_index}). Skipping this item.")
-                            results.append({
-                                "file": object_key,
-                                "status": "skipped",
-                                "message_id": None,
-                                "error": "Unexpected OCR response format or no text annotation"
-                            })
-                            continue
-
-                        extracted_info = extract_information(ocr_data_for_processor)
+                        # LLMで情報抽出
+                        extracted_info = extract_information(converted_ocr_data)
+                        logger.info(f"Extracted information for {object_key} (index: {image_index}): {extracted_info}")
 
                         # LLM処理結果とOCR結果を結合
                         combined_output = {
                             "llm_output": extracted_info,
-                            "ocr_output": ocr_response
+                            "ocr_output": converted_ocr_data
                         }
-
-                        # LLM処理結果をS3にアップロード
+                    except Exception as e_llm:
+                        logger.error(f"Error during LLM processing for {object_key} (index: {image_index}): {str(e_llm)}")
+                        raise e_llm
+                    # LLM処理結果をS3にアップロード
+                    try:
                         llm_output_bucket_name = os.environ.get('LLM_OUTPUT_S3_BUCKET_NAME')
                         if llm_output_bucket_name:
-                            llm_output_s3_key = f"llm_outputs/{clipping_request_id_from_message}/{object_key}_combined_output.json"
+                            llm_output_s3_key = f"{clipping_request_id_from_message}/{object_key}_combined_output.json"
                             upload_to_s3(json.dumps(combined_output, ensure_ascii=False), llm_output_bucket_name, llm_output_s3_key)
                         else:
                             logger.warning("LLM_OUTPUT_S3_BUCKET_NAME environment variable is not set. Skipping LLM output upload to S3.")
+                    except Exception as e_upload:
+                        logger.error(f"Error uploading LLM output to S3 for {object_key} (index: {image_index}): {str(e_upload)}")
+                        raise e_upload
 
+                    try:
                         current_clipping_request_id_for_processor = clipping_request_id_from_message or \
                                                                     (context.aws_request_id if hasattr(context, 'aws_request_id') else "unknown_request_id")
 
@@ -155,11 +155,9 @@ def process_document(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                             "message_id": message_id_sent,
                             "error": final_sqs_message.get("error_message")
                         })
-
-                    except Exception as e_s3_item:
-                        logger.exception(f"Error processing s3_key {object_key} (index: {image_index}) for request {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}: {str(e_s3_item)}")
-                        # Re-raise the exception after logging, to be caught by the outer try-except
-                        raise e_s3_item
+                    except Exception as e_processor:
+                        logger.exception(f"Error processing extracted data for {object_key} (index: {image_index}) for request {clipping_request_id_from_message}, SQS message ID: {current_sqs_message_id}: {str(e_processor)}")
+                        raise e_processor
                     finally:
                         if local_file_path and os.path.exists(local_file_path):
                             try:

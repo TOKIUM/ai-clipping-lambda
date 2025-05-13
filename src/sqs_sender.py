@@ -30,17 +30,7 @@ def send_to_queue(processed_data):
         # SQSにメッセージを送信
         response = sqs_client.send_message(
             QueueUrl=OUTPUT_QUEUE_URL,
-            MessageBody=message_body,
-            MessageAttributes={
-                'ProcessType': {
-                    'StringValue': 'DocumentProcessing',
-                    'DataType': 'String'
-                },
-                'Timestamp': {
-                    'StringValue': processed_data.get('process_timestamp', ''),
-                    'DataType': 'String'
-                }
-            }
+            MessageBody=message_body
         )
         
         message_id = response.get('MessageId')
