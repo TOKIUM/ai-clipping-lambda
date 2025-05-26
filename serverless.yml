@@ -89,8 +89,8 @@ custom:
       logLevel: INFO
       inputQueueName: ${self:provider.stage}-${self:service}-input-queue
       inputDLQName: ${self:provider.stage}-${self:service}-input-dlq
-      outputQueueArn: arn:aws:sqs:ap-northeast-1:885453572349:production-clipSuggestion-aiSuggestionResultQueue
-      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/885453572349/production-clipSuggestion-aiSuggestionResultQueue
+      outputQueueArn: arn:aws:sqs:ap-northeast-1:219825478644:production-clipSuggestion-aiSuggestionResultQueue
+      outputQueueUrl: https://sqs.ap-northeast-1.amazonaws.com/219825478644/production-clipSuggestion-aiSuggestionResultQueue 
       bucketName: national-tax-document-clipping-production
       llmOutputBucketName: ${self:provider.stage}-llm-output-${self:service}
 
