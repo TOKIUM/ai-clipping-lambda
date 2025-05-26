@@ -1,6 +1,19 @@
 import logging
 import os
 import json
+import bugsnag  # Bugsnag をインポート
+from bugsnag.handlers import BugsnagHandler  # BugsnagHandler をインポート
+
+# Bugsnag を初期化
+bugsnag.configure(
+    api_key=os.environ.get("BUGSNAG_API_KEY"),
+    release_stage=f"{os.environ.get('ENVIRONMENT')}-TK",
+    app_version=os.environ.get("AWS_LAMBDA_FUNCTION_VERSION"),
+    project_root=os.path.dirname(os.path.abspath(__file__)),
+    auto_capture_sessions=True,
+    asynchronous=False,
+    app_type="lambda",
+)
 
 def setup_logger(name='ai-clipping-lambda'):
     """
@@ -29,6 +42,10 @@ def setup_logger(name='ai-clipping-lambda'):
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         
+        # Bugsnag ハンドラの作成と設定
+        bugsnag_handler = BugsnagHandler()
+        bugsnag_handler.setLevel(logging.WARNING)
+        
         # フォーマッタの作成
         if os.environ.get('ENVIRONMENT') == 'production':
             # JSON形式のフォーマットを使用（CloudWatchでの検索を容易にするため）
@@ -56,5 +73,6 @@ def setup_logger(name='ai-clipping-lambda'):
         
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+        logger.addHandler(bugsnag_handler)  # Bugsnag ハンドラをロガーに追加
     
     return logger

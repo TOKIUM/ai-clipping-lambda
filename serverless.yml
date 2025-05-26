@@ -29,6 +29,7 @@ provider:
     GOOGLE_APPLICATION_CREDENTIALS: ./credential.json
     S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.bucketName}
     LLM_OUTPUT_S3_BUCKET_NAME: ${self:custom.environments.${self:provider.stage}.llmOutputBucketName}
+    BUGSNAG_API_KEY: ${env:BUGSNAG_API_KEY}
   
   # IAMロールの設定
   iamRoleStatements:

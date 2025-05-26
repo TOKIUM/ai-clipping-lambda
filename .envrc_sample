@@ -1,0 +1,40 @@
+# .envrc_sample
+
+# --- Google Cloud Settings ---
+# Google Cloud リージョン (例: us-central1)
+export GOOGLE_CLOUD_REGION="us-central1"
+
+# Google Cloud 認証情報ファイルへのパス
+# プロジェクトルートに credential.json を配置する場合
+export GOOGLE_APPLICATION_CREDENTIALS="./credential.json"
+# 絶対パスで指定する場合
+# export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/credential.json"
+
+# 使用する Vertex AI Gemini モデル名
+export GEMINI_MODEL="gemini-2.0-flash"
+
+# Bugsnag 認証情報 (必要な場合)
+# export BUGSNAG_API_KEY="YOUR_BUGSNAG_API_KEY"
+
+# --- AWS Settings (for LocalStack or direct AWS access) ---
+# ローカルからAWSサービスにアクセスする場合に設定 (LocalStackの場合は不要な場合あり)
+# export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID"
+# export AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACCESS_KEY"
+# export AWS_REGION="ap-northeast-1" # Lambdaをデプロイするリージョン
+
+# --- Application Settings (for local testing) ---
+# ローカルテスト時に使用するS3バケット名 (LocalStackで作成したものなど)
+# export S3_BUCKET_NAME="ai-clipping-dev-bucket" # 例: serverless.yml の dev 設定に合わせる
+
+# ローカルテスト時に使用する出力SQSキューURL (LocalStackで作成したものなど)
+# export OUTPUT_QUEUE_URL="http://localhost:4566/000000000000/ai-clipping-dev-output-queue" # LocalStackのデフォルトURL例
+
+# ローカルテスト時のログレベル (DEBUG, INFO, WARNING, ERROR)
+# export LOG_LEVEL="DEBUG"
+
+# ローカルテスト時の環境名 (dev, staging など)
+# export ENVIRONMENT="dev"
+
+# --- direnv settings ---
+# direnvがこのファイルを読み込むようにする (任意)
+# echo "source_env .envrc" > .envrc

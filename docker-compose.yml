@@ -16,7 +16,12 @@ services:
       - AWS_ENDPOINT_URL=http://localstack:4566
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL=gemini-1.5-pro
+      - GEMINI_MODEL=${GEMINI_MODEL}
+      - GOOGLE_CLOUD_REGION=us-central1
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credential.json
+      - S3_BUCKET_NAME=national-tax-document-clipping-development
+      - LLM_OUTPUT_S3_BUCKET_NAME=development-llm-output-clip-suggestion
+      - BUGSNAG_API_KEY=${BUGSNAG_API_KEY}
     depends_on:
       - localstack
     command: >
