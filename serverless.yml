@@ -137,3 +137,15 @@ resources:
         #   RestrictPublicBuckets: true
 
 plugins: []
+
+package:
+  exclude:
+    - .git/**
+    - localstack/**
+    - tests/**
+    - README.md
+    - local_test.py
+    - run_local_tests.py
+    - tests/**
+    - data/**
+    - verification/**
