@@ -68,7 +68,7 @@ def extract_ocr_data_from_image(image_path):
         logger.error(f"Error extracting OCR data from image {image_path}: {str(e)}")
         raise
 
-def extract_ocr_data_from_pdf(pdf_path, max_pages=1):
+def extract_ocr_data_from_pdf(pdf_path, max_pages=1, dpi=150):
     """
     PDFファイルからページごとにOCR結果を取得する
     - PDFをページごとに画像に変換
@@ -77,6 +77,7 @@ def extract_ocr_data_from_pdf(pdf_path, max_pages=1):
     Args:
         pdf_path (str): 処理するPDFのパス
         max_pages (int): 処理する最大ページ数。デフォルトは1。
+        dpi (int): 画像変換時の解像度（DPI）。デフォルトは150。
 
     Returns:
         list[google.cloud.vision.AnnotateImageResponse]:
@@ -90,13 +91,18 @@ def extract_ocr_data_from_pdf(pdf_path, max_pages=1):
         pdf_document = fitz.open(pdf_path)
         num_pages_to_process = min(len(pdf_document), max_pages)
 
-        logger.info(f"Processing {num_pages_to_process} page(s) out of {len(pdf_document)} for PDF: {pdf_path}")
+        logger.info(f"Processing {num_pages_to_process} page(s) out of {len(pdf_document)} for PDF: {pdf_path} at {dpi} DPI")
 
         for page_num in range(num_pages_to_process):
             logger.info(f"Processing PDF page {page_num+1}/{num_pages_to_process}")
 
             page = pdf_document.load_page(page_num)
-            pix = page.get_pixmap(alpha=False)
+            
+            # PDFの元の解像度を保持するため、変換マトリックスを計算
+            # 指定されたDPIで画像を生成
+            zoom = dpi / 72  # 72dpiがPyMuPDFのデフォルト
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
 
             img_bytes = pix.tobytes("png")
 
