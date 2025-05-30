@@ -3,6 +3,7 @@ import subprocess
 import os
 import pathlib
 import multiprocessing
+import argparse
 
 # CSVファイルへのパス
 csv_file_path = 'data/clipping_0521.csv'
@@ -10,6 +11,8 @@ csv_file_path = 'data/clipping_0521.csv'
 local_test_script_path = 'local_test.py'
 # 出力ディレクトリ名
 output_dir_name = 'output_jsons'
+# デフォルトの並列プロセス数（Noneの場合はCPUコア数を使用）
+default_num_processes = 4
 
 def process_file(target_file_path_tuple):
     """
@@ -63,6 +66,12 @@ def process_file(target_file_path_tuple):
 
 
 def main():
+    # コマンドライン引数の解析
+    parser = argparse.ArgumentParser(description='CSVファイルから並列でファイル処理を実行')
+    parser.add_argument('-p', '--processes', type=int, default=default_num_processes, 
+                       help=f'並列プロセス数 (デフォルト: {default_num_processes})')
+    args = parser.parse_args()
+    
     # 出力ディレクトリを作成 (存在しない場合)
     pathlib.Path(output_dir_name).mkdir(parents=True, exist_ok=True)
 
@@ -100,10 +109,11 @@ def main():
         print("処理対象のファイルが見つかりませんでした。")
         return
 
-    # CPUのコア数を取得（Noneを指定するとos.cpu_count()が使われる）
-    # あまりに多くのプロセスを立てるとリソースを圧迫する可能性があるので注意
-    # 例えば、コア数 - 1 などに調整することも検討
-    num_processes = multiprocessing.cpu_count()
+    # 並列プロセス数を取得（コマンドライン引数またはデフォルト値を使用）
+    num_processes = args.processes
+    if num_processes is None:
+        num_processes = multiprocessing.cpu_count()
+    
     print(f"{len(tasks)} 件のファイルを {num_processes} プロセスで並列処理します。")
 
     with multiprocessing.Pool(processes=num_processes) as pool:
