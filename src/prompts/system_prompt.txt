@@ -89,7 +89,7 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
     },
     "bbox": {"x": float, "y": float, "width": float, "height": float},
   },
-  "fee_payer": {
+  "bank_transfer_fee_payer": {
     "value": str,  # 手数料負担先(記載なし=0, 支払者=1, 送付元=2)
     "bbox": {"x": float, "y": float, "width": float, "height": float}
   },
