@@ -25,6 +25,7 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
   "amount_info": { # 金額情報
     "total_amount": {
       "value": float,  # 合計金額（税込）
+      "bbox": {"x": float, "y": float, "width": float, "height": float}
     },
     "currency": {
       "value": str,  # 通貨, 例: "JPY"、"USD"など

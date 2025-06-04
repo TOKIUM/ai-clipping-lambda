@@ -102,6 +102,8 @@ def convert_to_clips_format_recursive(data: Any, parent_key: str = "", page: int
                     final_field_name = "withholding_tax_amount"
                 elif base_field_name == "amount_info.tax_free_amount":
                     final_field_name = "taxable_amount_for_0_percent"
+                elif base_field_name == "amount_info.total_amount":
+                    final_field_name = "total_amount"
 
                 if final_field_name:
                     clip = create_clip_item(
@@ -305,6 +307,7 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
                             if not is_duplicate_bank:
                                 formatted_clip = {
                                     "field_name": clip.get("field_name"),
+                                    # "value": clip.get("value"), # value は内部処理用なので、SQSメッセージには含めない
                                     "x_coordinate": bbox_data["x_coordinate"],
                                     "y_coordinate": bbox_data["y_coordinate"],
                                     "width": bbox_data["width"],
@@ -312,10 +315,6 @@ def format_sqs_message(processed_data: Dict[str, Any], clipping_request_id: str,
                                     "page": clip.get("page", 1), # 内部クリップからページ情報を取得
                                     "reliability_score": clip.get("confidence", 1) # confidence を reliability_score にマッピング
                                 }
-                                # reliability_score が None の場合はキー自体を含めないか、デフォルト値を入れるか？ -> 仕様確認。一旦そのまま入れる
-                                if formatted_clip["reliability_score"] is None:
-                                    # del formatted_clip["reliability_score"] # またはデフォルト値設定
-                                    pass # None のままにする
 
                                 formatted_clips.append(formatted_clip)
                     else:
