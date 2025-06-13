@@ -30,15 +30,7 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
     "currency": {
       "value": str,  # 通貨, 例: "JPY"、"USD"など
     },
-    "tax_free_amount": {
-      "value": float,  # 非課税の金額
-      "bbox": {"x": float, "y": float, "width": float, "height": float}
-    },
-    "amount_withholding": {
-      "value": float,  # 源泉徴収税額
-      "bbox": {"x": float, "y": float, "width": float, "height": float}
-    },
-    "tax_breakdown": [  # 税率(10%, 8%)ごとの内訳（非課税を除く）
+    "tax_breakdown": [  # 税率(10%, 8%)ごとの内訳（非課税を除く）、金額が0の場合は抽出しなくて良い
       {
         "tax_rate": {
           "value": float,  # 税率（例: 0.10 = 10%）
@@ -55,9 +47,17 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
           "value": float,  # 消費税等を含んだ税込の金額(税額ごとの記載がなければtotalの金額を入れる)
           "bbox": {"x": float, "y": float, "width": float, "height": float}
         }
-      },
-      "bbox": {"x": float, "y": float, "width": float, "height": float},
-    ]
+      }
+    ],
+    "tax_free_amount": {
+      "value": float,  # 非課税の金額
+      "bbox": {"x": float, "y": float, "width": float, "height": float}
+    },
+    "amount_withholding": {
+      "value": float,  # 源泉徴収税額
+      "bbox": {"x": float, "y": float, "width": float, "height": float}
+    },
+    "bbox": {"x": float, "y": float, "width": float, "height": float},
   },
   "due_date": {
     "value": str,  # 支支払期日/口座振替日。請求日の月末に振り込むなど特定の日付がない場合でも、その範囲のBounding Boxを返してください。
@@ -91,7 +91,7 @@ tax_breakdownとbank_detailsに関しては、それぞれの項目に関する�
     "bbox": {"x": float, "y": float, "width": float, "height": float},
   },
   "bank_transfer_fee_payer": {
-    "value": str,  # 手数料負担先(記載なし=0, 支払者=1, 送付元=2)
+    "value": str,  # 手数料負担先が記載されている場合は支払者, 送付元を判別して入力してください。
     "bbox": {"x": float, "y": float, "width": float, "height": float}
   },
 }
