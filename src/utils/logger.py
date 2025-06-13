@@ -7,7 +7,7 @@ from bugsnag.handlers import BugsnagHandler  # BugsnagHandler をインポート
 # Bugsnag を初期化
 bugsnag.configure(
     api_key=os.environ.get("BUGSNAG_API_KEY"),
-    release_stage=f"{os.environ.get('ENVIRONMENT')}-TK",
+    release_stage=f"{os.environ.get('ENVIRONMENT')}-Clipping",
     app_version=os.environ.get("AWS_LAMBDA_FUNCTION_VERSION"),
     project_root=os.path.dirname(os.path.abspath(__file__)),
     auto_capture_sessions=True,
