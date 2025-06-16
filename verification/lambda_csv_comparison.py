@@ -54,8 +54,7 @@ def process_pdf_file(pdf_path: str) -> Dict[str, Any]:
             raise Exception("Bounding Box形式の変換に失敗しました")
         
         # LLM処理
-        file_identifier = os.path.splitext(os.path.basename(pdf_path))[0]  # ファイル名から拡張子を除去
-        extracted_info = extract_information(converted_ocr_data, file_identifier)
+        extracted_info = extract_information(converted_ocr_data)
         
         # トークン使用量を分離
         usage_metadata = extracted_info.pop('usage_metadata', None)
